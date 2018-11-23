@@ -1,5 +1,6 @@
 import tflearn
 from keras import metrics
+from keras.layers import MaxPooling2D, regularizers
 from tflearn.layers.core import input_data, dropout, fully_connected
 from tflearn.layers.conv import conv_2d, max_pool_2d
 from tflearn.layers.estimator import regression
@@ -9,18 +10,18 @@ from parameters import MOVEMENT_NUM
 
 def CNN(input_shape,
         net_name,
-        filter_size,
+        filter_num,
         keep_prob=0.5,
         lr=0.001,
         loss='categorical_crossentropy',
         metric='accuracy',
         model_name=None):
     network = input_data(shape=input_shape, name=net_name + '_input_layer')
-    network = conv_2d(network, filter_size[0], 3, activation='relu', name=net_name + '_conv1')
+    network = conv_2d(network, filter_num[0], 3, activation='relu', name=net_name + '_conv1')
     # network = max_pool_2d(network, 2, name=net_name + '_max_pool1')
-    network = conv_2d(network, filter_size[1], 3, activation='relu', name=net_name + '_conv2')
+    network = conv_2d(network, filter_num[1], 3, activation='relu', name=net_name + '_conv2')
     # network = max_pool_2d(network, 2, name=net_name + '_max_pool2')
-    network = fully_connected(network, filter_size[2], activation='relu', name=net_name + '_fc1')
+    network = fully_connected(network, filter_num[2], activation='relu', name=net_name + '_fc1')
     network = dropout(network, keep_prob, name=net_name + '_dp1')
     network = fully_connected(network, MOVEMENT_NUM, activation='softmax', name=net_name + '_fc2')
     network = regression(network, optimizer='adam',
@@ -33,18 +34,18 @@ def CNN(input_shape,
 
 def DNN(input_shape,
         net_name,
-        filter_size,
+        units_num,
         keep_prob=0.5,
         lr=0.001,
         loss='categorical_crossentropy',
         metric='accuracy',
         model_name=None):
     input_layer = input_data(shape=input_shape, name=net_name + '_input_layer')
-    dense1 = tflearn.fully_connected(input_layer, filter_size[0], activation='relu',
+    dense1 = tflearn.fully_connected(input_layer, units_num[0], activation='relu',
                                      name=net_name + '_fc1')
                                     # regularizer='L2', weight_decay=0.001, name=net_name + '_fc1')
     dropout1 = tflearn.dropout(dense1, keep_prob, name=net_name + '_dp1')
-    dense2 = tflearn.fully_connected(dropout1, filter_size[1], activation='relu',
+    dense2 = tflearn.fully_connected(dropout1, units_num[1], activation='relu',
                                      name=net_name + '_fc2')
                                      # regularizer='L2', weight_decay=0.001, name=net_name + '_fc2')
     dropout2 = tflearn.dropout(dense2, keep_prob, name=net_name + '_dp2')
@@ -95,23 +96,56 @@ def LSTM(input_layer):
 import keras
 def keras_CNN(input_shape,
         net_name,
-        filter_size,
-        keep_prob=0.5,
-        lr=0.001,
-        loss='categorical_crossentropy',
-        metric='accuracy',
-        model_name=None):
+        filter_num,
+        keep_prob=0.5):
+    #create model
     model = keras.Sequential()
 
-    model.add(keras.layers.Conv2D(filter_size[0], 3, activation='relu', name=net_name + 'conv1', input_shape=input_shape))
-    model.add(keras.layers.Conv2D(filter_size[1], 3, activation='relu', name=net_name + 'conv2'))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(filter_size[2], activation='relu', name=net_name + '_fc1'))
+    model.add(keras.layers.Conv2D(filter_num[0], 3, activation='relu',
+                                  kernel_regularizer=regularizers.l2(0.01),
+                                  name=net_name + 'conv1',
+                                  input_shape=input_shape))
+    model.add(keras.layers.Conv2D(filter_num[1], 3, activation='relu',
+                                  kernel_regularizer=regularizers.l2(0.01),
+                                  name=net_name + 'conv2'))
     model.add(keras.layers.Dropout(keep_prob, name=net_name + '_dp1'))
-    model.add(keras.layers.Dense(MOVEMENT_NUM, activation='softmax', name=net_name + '_fc2'))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(filter_num[2], activation='relu',
+                                 kernel_regularizer=regularizers.l2(0.01),
+                                 name=net_name + '_fc1'))
+    model.add(keras.layers.Dropout(keep_prob, name=net_name + '_dp2'))
+
+    if net_name == 'movement':
+        model.add(keras.layers.Dense(MOVEMENT_NUM, activation='softmax', name=net_name + '_fc2'))
+
+    else:
+        model.add(keras.layers.Dense(1, activation='sigmoid', name=net_name + '_fc2'))
+
+    return model
+
+def keras_DNN(input_shape,
+        net_name,
+        units_num,
+        keep_prob=0.5,
+        lr=0.001):
+    #create model
+    model = keras.Sequential()
+    model.add(keras.layers.Dense(units_num[0], activation='relu',
+                                 kernel_regularizer=regularizers.l2(0.01),
+                                 name=net_name + '_fc1',
+                                 input_shape=input_shape))
+    model.add(keras.layers.Dropout(keep_prob, name=net_name + '_dp1'))
+
+    model.add(keras.layers.Dense(units_num[1], activation='relu',
+                                 kernel_regularizer=regularizers.l2(0.01),
+                                 name=net_name + '_fc2'))
 
 
-    model.compile(optimizer=keras.optimizers.Adam(lr=lr), loss=loss, metrics = [metrics.categorical_accuracy])
-    # network = max_pool_2d(network, 2, name=net_name + '_max_pool2')
+    model.add(keras.layers.Dropout(keep_prob, name=net_name + '_dp2'))
+
+    if net_name == 'movement':
+        model.add(keras.layers.Dense(MOVEMENT_NUM, activation='softmax', name=net_name + '_fc3'))
+    else:
+        model.add(keras.layers.Dense(1, activation='sigmoid', name=net_name + '_fc3'))
 
     return model

@@ -79,11 +79,14 @@ class HumanDetector():
 
     def detect(self, image):
         """Invoke object detection network on current frame."""
+        t0 = time.time()
         # Prepare the input image
         resized = cv2.resize(image, (self.model.width, self.model.height))
         # Forward the entire network for detection result
+        t1 = time.time()
         full_result = do_detect(self.model, resized, 0.5, 0.4, use_cuda=self.use_cuda, is_predict_only=True, force_no_head=self.force_no_head)
 
+        t2 = time.time()
         # print(full_result)
         # print(full_result.shape)
 
@@ -101,10 +104,16 @@ class HumanDetector():
         # Determine the desired output
         if self.mode in ['shallow', 'deep']:
             result = np.asarray(self.intermediate_outputs[0].data)
+            print(result.shape)
         else:
             result = full_result
         
         # print(full_result.shape, result.shape)
+        t3 = time.time()
+
+        # print("resize time is " + str(t1 - t0))
+        # print("do detect time is " + str(t2 - t1))
+        # print("overall time is " + str(t3 - t0))
 
         return full_result.astype(np.float), result.astype(np.float)
 
@@ -142,24 +151,69 @@ class HumanDetector():
 
     def _get_screen(self):
         # Get screen-shot and pre-process
+        t0 = time.time()
         screen = grab_screen(region=None)
         screen = screen[self.ymin:self.ymax, self.xmin:self.xmax]
+        t1 = time.time()
+        # print("grab screen time is " + str(t1 - t0))
         return screen
 
     def forward(self):
-        return self.detect(self._get_screen())
+        raw_location, feature = self.detect(self._get_screen())
+        if self.mode == 'full':
+            feature, valid = self.location(feature)
+        return feature
+
+    def leftdown(self, location):
+        # xs, ys, w, d
+        xs = location[0]
+        ys = location[1]
+        w = location[2]
+        h = location[3]
+        x = xs + w / 2
+        y = ys + h / 2
+        return (x, y)
+
+    def location(self, feature):
+        goal_location = feature[0]
+
+        if feature[2][0] > 0 and feature[2][0] < 0.65:
+            player_location = feature[2]
+            isvalid = True
+
+        elif feature[1][0] > 0 and feature[1][0] < 0.65:
+            player_location = feature[1]
+            isvalid = True
+
+        else:
+            player_location = feature[2]
+            isvalid = False
+
+        player_x, player_y = self.leftdown(player_location)
+        goal_x = goal_location[0]
+        goal_y = goal_location[1]
+
+        dx = goal_x - player_x
+        dy = goal_y - player_y
+
+        return np.array([dx, dy]), isvalid
 
     def init_input_window(self):
         if self.mode == 'deep':
-            shape = (STACK_NUM * 1024, 13, 13)
+            shape = (STACK_NUM, 1024, 13, 13)
         elif self.mode == 'shallow':
-            shape = (STACK_NUM * 128, 52, 52)
+            shape = (STACK_NUM, 128, 52, 52)
         else:
-            shape = (STACK_NUM * 2)
+            shape = (STACK_NUM, 2)
         input_window = np.zeros(shape=shape)
         # Generate and initialize input window with 10 feature maps
         for i in range(0, STACK_NUM):
+            # result = self.forward()
+            # print(result.shape)
             input_window[i, :] = self.forward()
+        print(input_window.shape)
+        input_window = np.concatenate(input_window)
+        print(input_window.shape)
         return input_window
 
 #####
