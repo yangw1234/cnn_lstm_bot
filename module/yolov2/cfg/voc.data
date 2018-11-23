@@ -1,0 +1,5 @@
+train  = training_data\\VID02-training\\train.txt
+valid  = training_data\\VID02-training\\val.txt
+names = data/fifa.names
+backup = backup
+gpus = 0
