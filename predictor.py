@@ -4,11 +4,12 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.optimizers import Adam
 # from tensorflow.python.estimator import keras
 
-from tflearn_model import CNN, DNN, keras_CNN, keras_DNN
+from keras_net import keras_CNN, keras_DNN
 from parameters import STACK_NUM, DATA_PATH, MOVEMENT_MODEL_PATH, SCORE_MODEL_PATH, RANDOM_DATA_PATH
 import numpy as np
 import os
 import tensorflow as tf
+
 
 class Predictor:
     def __init__(self, mode, epoch, lr, keep_prob, batch_size):
@@ -72,7 +73,8 @@ class MovementPredictor(Predictor):
 
         self.model_movement = self.build_model()
 
-        self.logs_dir = "../keras_logs/movement/" + self.model_name + '_' + time.strftime("%Y%m%d-%H%M%S")
+        self.logs_dir = "/play/keras_logs/movement/" + self.model_name + '_' + time.strftime("%Y%m%d-%H%M%S")
+        self.logs_dir = "/play/keras_logs/movement/"
 
         self.loaded = False
 
@@ -135,9 +137,9 @@ class MovementPredictor(Predictor):
         #                    show_metric=True,
         #                    shuffle=True,
         #                    run_id=self.model_name + str(time.time()))
-        tensorboard = TensorBoard(log_dir=self.logs_dir)
+        tensorboard = TensorBoard(log_dir=self.logs_dir + "/tensorboard")
 
-        checkpoint_path = self.logs_dir + "/weights-improvement-{epoch:02d}-{val_acc:.2f}-{loss:.2f}.hdf5"
+        checkpoint_path = self.logs_dir + "/weights" + "/weights-improvement-{epoch:02d}-{val_acc:.2f}-{loss:.2f}.hdf5"
         checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_acc', verbose=1, save_best_only=False)
 
         self.model_movement.compile(optimizer=Adam(lr=self.lr), loss='categorical_crossentropy', metrics = ['accuracy'])
@@ -148,17 +150,17 @@ class MovementPredictor(Predictor):
                            validation_split=0.1,
                            shuffle=True, callbacks=[tensorboard, checkpoint])
 
-        self.model_movement.save(self.model_fullname + '.keras')
+        # self.model_movement.save(self.model_fullname + '.keras')
 
     def inference(self, input_window):
         if not self.loaded:
             if self.mode == 'full':
-                restore_model = "../keras_logs/movement/" + \
+                restore_model = "/fifa/models/movement/" + \
                                 "feature_mode-full-epoch-400-lr-0.0001-batch_size-256-stack_num-1-keep_prob-1.0_20181122-230634/" \
                                 + "weights-improvement-400-0.68-0.87.hdf5"
 
             elif self.mode == 'deep':
-                restore_model = "../keras_logs/" + \
+                restore_model = "/fifa/models/movement/" + \
                                 "feature_mode-deep-epoch-20-lr-0.0001-batch_size-256-stack_num1_1542790347.5969057/" \
                                 + "weights-improvement-20-0.75-0.85.hdf5"
 
@@ -166,12 +168,18 @@ class MovementPredictor(Predictor):
                 restore_model = self.logs_dir + ".hdf5"
 
             self.model_movement.load_weights(restore_model)
-            self.model_movement.compile(optimizer=Adam(lr=self.lr), loss='categorical_crossentropy',
-                                        metrics=['accuracy'])
+            # self.model_movement.compile(optimizer=Adam(lr=self.lr), loss='categorical_crossentropy',
+            #                             metrics=['accuracy'])
             self.loaded = True
         movement = self.model_movement.predict(input_window)
-        movement_index = np.argmax(movement)
-        return movement_index
+        movement = movement[0][1:]
+        if movement.max() < 0.5:
+            movement_index = np.random.choice(4, p=movement/movement.sum())
+        else:
+            movement_index = np.argmax(movement)
+        # movement_index2 = np.random.choice(4, p=movement)
+        # movement_index = np.argmax(movement)
+        return movement_index + 1
 
 class ScorePredictor(Predictor):
 
@@ -188,7 +196,7 @@ class ScorePredictor(Predictor):
 
 
     def reshape_data(self, data):
-        window = data[-STACK_NUM : ]
+        window = data[-STACK_NUM -2: -2]
 
         sampleX = []
         for row in window:
@@ -202,7 +210,7 @@ class ScorePredictor(Predictor):
 
     def _load_data(self, path, X, Y_Score):
         feature_path = path + self.mode + "_feature/"
-        for filename in os.listdir(feature_path):
+        for i, filename in enumerate(os.listdir(feature_path)):
             if filename=='all_data.npz':
                 continue
             fullname = feature_path + filename
@@ -211,6 +219,8 @@ class ScorePredictor(Predictor):
             trainX = self.reshape_data(data)
             X.append(trainX)
             Y_Score.append(score)
+            if i % 10 == 0:
+                print("load %s files" % i)
         print(len(X), len(Y_Score))
         # return X, Y_Score
 
@@ -224,7 +234,7 @@ class ScorePredictor(Predictor):
         return data - 500
 
     def load_data(self):
-        feature_path = RANDOM_DATA_PATH + self.mode + "_feature/"
+        feature_path = DATA_PATH + self.mode + "_feature/"
         all_data_filename = feature_path + "all_data.npz"
         if os.path.isfile(all_data_filename):
         # if False:
@@ -238,7 +248,7 @@ class ScorePredictor(Predictor):
             Y_Score = []
             self._load_data(DATA_PATH, X, Y_Score)
             # print("result", len(X), len(Y_Score))
-            self._load_data(RANDOM_DATA_PATH, X, Y_Score)
+            # self._load_data(RANDOM_DATA_PATH, X, Y_Score)
             # print("result", len(X), len(Y_Score))
 
             X = np.asarray(X)
@@ -273,22 +283,25 @@ class ScorePredictor(Predictor):
 
     def inference(self, input_window):
 
-        if self.loaded:
+        if not self.loaded:
             if self.mode == 'full':
-                restore_model = "../keras_logs/score/" + \
+                restore_model = "/fifa/models/score/" + \
                                 "feature_mode-full-epoch-500-lr-0.0005-batch_size-256-stack_num-1-keep_prob-1.0_20181122-232340/" + \
                                 "weights-improvement-500-0.07-0.06.hdf5"
 
             elif self.mode == 'deep':
-                restore_model = "../keras_logs/score/" + \
+                restore_model = "/fifa/models/score/" + \
                                 "feature_mode-deep-epoch-400-lr-0.0001-batch_size-64-stack_num-1-keep_prob-0.8_20181122-144945/" \
                                 + "weights-improvement-400-0.07-0.06.hdf5"
+                # restore_model = "/sources/keras_logs/score/" \
+                #                 + "feature_mode-deep-epoch-500-lr-0.0005-batch_size-256-stack_num-1-keep_prob-1.0_20181123-225112/" \
+                #                 +  "weights-improvement-384-0.06-0.05.hdf5"
 
             else:
                 restore_model = self.logs_dir + ".hdf5"
 
             self.model_score.load_weights(restore_model)
-            self.model_score.compile(optimizer=Adam(lr=self.lr), loss='mean_squared_error', metrics=['mae'])
+            # self.model_score.compile(optimizer=Adam(lr=self.lr), loss='mean_squared_error', metrics=['mae'])
             self.loaded = True
 
         scaled_score = self.model_score.predict(input_window)

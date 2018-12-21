@@ -10,7 +10,7 @@ SCORE_RECORDING_NUM = 3
 TRAIN_DATA_PATH = "../../fifa_data/feature_data/"
 SCORE_NET_TRAIN_DATA_PATH = "../../fifa_data/feature_data/"
 
-DATA_PATH = "D:/fifa_data/play/"
+DATA_PATH = "D:/play/play/"
 IMAGE_PATH = DATA_PATH + 'image_data/'
 DETECTION_IMAGE_PATH = DATA_PATH + 'detection_image/'
 DEEP_FEATURE_PATH = DATA_PATH + 'deep_feature/'

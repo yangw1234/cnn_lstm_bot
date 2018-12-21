@@ -18,8 +18,8 @@ from score_detector import ScoreDetector
 
 yolo_root = osp.join('module', 'yolov2')
 namesfile = osp.join(yolo_root, 'data', 'fifa.names')
-full_game_weight = osp.join('models', 'human_detector', '000300.weights')
-shooting_bronze_weight = osp.join('models', 'human_detector', '000440.weights')
+full_game_weight = osp.join('/fifa', 'models', 'human_detector', '000300.weights')
+shooting_bronze_weight = osp.join('/fifa','models', 'human_detector', '000440.weights')
 goalkeeper_weight = osp.join('models', 'human_detector', '000290.weights')
 
 def visualize_detection(feature, image, fname=None):
@@ -104,7 +104,7 @@ class HumanDetector():
         # Determine the desired output
         if self.mode in ['shallow', 'deep']:
             result = np.asarray(self.intermediate_outputs[0].data)
-            print(result.shape)
+            # print(result.shape)
         else:
             result = full_result
         

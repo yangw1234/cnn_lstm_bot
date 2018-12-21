@@ -5,25 +5,24 @@ import argparse
 import time
 import numpy as np
 
-from detectors import RandomDetector
 from direct_keys import *
 from display_controller import get_controller_image
 from get_keys import key_check
 from human_detector import HumanDetector
 from parameters import STACK_NUM
 from predictor import MovementPredictor, ScorePredictor
-from utils import label_map_util
-from utils import visualization_utils as vis_util
+# from utils import label_map_util
+# from utils import visualization_utils as vis_util
 
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('model_path', help="Path where the model is stored")
 # parser.add_argument('img_path', help="Path where the images are stored")
 # parser.add_argument('output_path',  help="Path to store the detection results")
-parser.add_argument('--mode', type=str, choices=['deep', 'shallow', 'full'], default='shallow')
+parser.add_argument('--mode', type=str, choices=['deep', 'shallow', 'full'], default='deep')
 parser.add_argument('--lr', type=float, default=0.01)
 parser.add_argument('--epoch', type=int, default=400)
-parser.add_argument('--train_movement', type=bool, default=False)
+parser.add_argument('--train_movement', type=bool, default=True)
 parser.add_argument('--train_score', type=bool, default=False)
 parser.add_argument('--keep_prob', type=float, default=1.0)
 
@@ -54,13 +53,14 @@ def take_action(movement_index, action_index):
 
     # for index in movement_custom_b[movement_index]:
     #     PressKey(index)
-    for index in action[action_index]:
-        PressKey(index)
-    time.sleep(0.18)
-    # for index in movement_custom_b[movement_index]:
+    if True:
+        for index in action[action_index]:
+            PressKey(index)
+        time.sleep(0.18)
+        # for index in movement_custom_b[movement_index]:
         # ReleaseKey(index)
-    for index in action[action_index]:
-        ReleaseKey(index)
+        for index in action[action_index]:
+            ReleaseKey(index)
     # time.sleep(0.5)
 
 def check_pause(paused):
@@ -103,6 +103,8 @@ def init_input_window(detector):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    # np.random.seed(0)
+    fake_data = np.zeros(shape=[1, 1024, 13, 13], dtype=np.float)
     movement_predictor = MovementPredictor(mode=args.mode,
                                            epoch=args.epoch,
                                            lr=args.lr,
@@ -126,6 +128,9 @@ if __name__ == "__main__":
         play = 1
 
         last_time = time.time()
+        last_shoot_time = time.time()
+        init_threshold = 700
+        threshold = init_threshold
         frames_count = 0
         detection_time = []
         prediction_time = []
@@ -133,7 +138,7 @@ if __name__ == "__main__":
         print('Game paused, press p to start.')
         while True:
             if not paused:
-                # time.sleep(0.1)
+                time.sleep(0.005)
                 # if start:
                 #     input_window = init_input_window(detector)
                 #     start = False
@@ -149,6 +154,7 @@ if __name__ == "__main__":
                 input_window = np.expand_dims(rep, axis=0)
 
                 movement_index = movement_predictor.inference(input_window)
+                # input_window = fake_data
                 score = score_predictor.inference(input_window)
                 cur_prediction_time = time.time() - cur_time
                 prediction_time.append(cur_prediction_time)
@@ -157,16 +163,26 @@ if __name__ == "__main__":
                 print("score is %s" % score)
 
 
-                if score > 722:
+                if score > threshold:
+                    threshold = init_threshold
                     action_index = 1
                 else:
+                    threshold -= 0
                     action_index = 0
 
                 if play == 1:
                     # movement_index = 0
                     # action_index = 0
+                    # if action_index == 1:
+                    #     current_shoot_time = time.time()
+                    #     if current_shoot_time - last_shoot_time < 4:
+                    #         action_index = 0
+                    #     else:
+                    #         last_shoot_time = current_shoot_time
+
                     take_action(movement_index, action_index)
                     if action_index == 1:
+                        take_action(0, 0)
                         time.sleep(2)
                         # input_window = init_input_window(detector)
 
