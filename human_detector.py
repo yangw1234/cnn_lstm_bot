@@ -149,7 +149,7 @@ class HumanDetector():
             cv2.imwrite(fname, flatten_feature.astype(np.uint8))
         return flatten_feature
 
-    def _get_screen(self):
+    def get_screen(self):
         # Get screen-shot and pre-process
         t0 = time.time()
         screen = grab_screen(region=None)
@@ -158,8 +158,8 @@ class HumanDetector():
         # print("grab screen time is " + str(t1 - t0))
         return screen
 
-    def forward(self):
-        raw_location, feature = self.detect(self._get_screen())
+    def forward(self, screen):
+        raw_location, feature = self.detect(screen)
         if self.mode == 'full':
             feature, valid = self.location(feature)
         return feature

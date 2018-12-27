@@ -119,6 +119,7 @@ def collect_training_data():
             full_screen = grab_screen(region=None)
             screen = full_screen[33:753, 8:1288]
             score_screen = screen[58:93, 1126:1186]
+
             # image_np = cv2.resize(screen, (900, 400))
             # the array based representation of the image will be used later in order to prepare the
             # result image with boxes and labels on it.

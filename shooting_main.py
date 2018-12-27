@@ -143,7 +143,10 @@ if __name__ == "__main__":
                 #     input_window = init_input_window(detector)
                 #     start = False
                 cur_time = time.time()
-                rep = detector.forward()
+                screen = detector.get_screen()
+
+
+                rep = detector.forward(screen)
                 cur_detection_time = time.time() - cur_time
                 detection_time.append(cur_detection_time)
                 # print("detection time is {}s".format(cur_detection_time))
