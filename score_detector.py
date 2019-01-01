@@ -64,8 +64,10 @@ def split_reward_screen(reward_screen, crop_right=True, verbose=0):
     # Threshold to black and white
     reward_screen = cv2.cvtColor(reward_screen, cv2.COLOR_RGB2GRAY)
     reward_screen = 255 - reward_screen
-    reward_screen = cv2.adaptiveThreshold(reward_screen, 255, 
+    reward_screen = cv2.adaptiveThreshold(reward_screen, 255,
         cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 3, 2)
+    # cv2.imshow("reward", reward_screen)
+    # cv2.waitKey(0)
 
     # Split into characters by histogram
     # Generate vertical histogram
@@ -73,10 +75,15 @@ def split_reward_screen(reward_screen, crop_right=True, verbose=0):
     split_img = cv2.resize(reward_screen, None, fx=2, fy=2)
     split_img = cv2.erode(split_img, kernel, iterations=1)
     split_img = (255 - split_img) / 255
+
     # Crop the left size
     # split_img = split_img[:, 15:]
     if crop_right:
         split_img = split_img[:, :-15]
+
+    # cv2.imshow("reward", split_img)
+    # cv2.waitKey(0)
+
     hist = np.sum(split_img, axis=0)
     # Parameters while segmenting
     # Relative values, should be fine with different source image's shape
@@ -122,9 +129,9 @@ def split_reward_screen(reward_screen, crop_right=True, verbose=0):
             plt.plot(np.ones(50) * i, range(50), 'b')
         print('Hist shape:', hist.shape)
         plt.plot(hist)
-
+        #
         # plt.show()
-
+        #
         # cv2.imshow('score', split_img)
         # cv2.waitKey(0)
 
@@ -166,7 +173,7 @@ def generate_training_data():
     # cv2.waitKey()
 
     # Split the digits by histogram
-    digits = split_reward_screen(reward_screen, verbose=0)
+    digits = split_reward_screen(reward_screen, verbose=1)
 
     # For each digit
     if len(digits) > 0:

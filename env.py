@@ -15,6 +15,14 @@ class FIFAEnv():
         self.ymin, self.ymax, self.xmin, self.xmax = 33, 753, 8, 1288
         self.pre_movement = []
         self.detector = ScoreDetector()
+        self.score_tl_y = 65
+        self.score_br_y = 100
+        self.score_tl_x = 1200 # 1230
+        self.score_br_x = 1260 # 1290
+        self.score_tl_y = 58
+        self.score_br_y = 93
+        self.score_tl_x = 1126 # 1230
+        self.score_br_x = 1186 # 1290
 
     def observe(self):
         screen = self._get_screen()
@@ -59,14 +67,25 @@ class FIFAEnv():
 
         reward = 0
         if action_index == 1:
-            score_screen = pre_action_screen[58:93, 1126:1186]
+
+            score_screen = pre_action_screen[self.score_tl_y:self.score_br_y, self.score_tl_x + 2:self.score_br_x + 2]
+
+            # cv2.imshow("score", score_screen)
+            # cv2.waitKey(0)
+
             pre_score, success = self.detector.predict(score_screen)
+            if not success:
+                cv2.imwrite("score_screen_error.png", score_screen)
             for i in range(5):
                 time.sleep(0.4)
                 current_screen = self._get_screen()
-                score_screen = current_screen[58:93, 1126:1186]
+                score_screen = score_screen = pre_action_screen[self.score_tl_y:self.score_br_y, self.score_tl_x + 2:self.score_br_x + 2]
                 current_score, success = self.detector.predict(score_screen)
-                if current_score - pre_score > 0:
+
+                if not success:
+                    print("ERROR")
+
+                if success and current_score - pre_score > 0:
                     reward = current_score - pre_score
                     break
 
@@ -84,6 +103,7 @@ class FIFAEnv():
         ReleaseKey(enter)
         time.sleep(0.5)
         screen = self._get_screen()
+        return screen
 
     def is_over(self, screen, ref):
         center = screen[100:600, 400:1000]
